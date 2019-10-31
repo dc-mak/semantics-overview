@@ -13,6 +13,7 @@ stdenv.mkDerivation {
             beamer
             beamertheme-metropolis
             cm-super
+            ebproof
             ec
             etoolbox
             euenc
