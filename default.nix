@@ -19,12 +19,14 @@ stdenv.mkDerivation {
             fontspec
             fpl
             hardwrap
+            latexmk
             mathspec
             mathpazo
             metafont
             ms
             palatino
             pgfopts
+            realscripts # handout with xetex
             setspace
             scheme-basic
             titlesec
@@ -32,6 +34,7 @@ stdenv.mkDerivation {
             tufte-latex
             xetex
             xetex-def
+            xltxtra # handout with xetex
             zapfding
             ;
         })
