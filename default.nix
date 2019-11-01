@@ -21,6 +21,7 @@ stdenv.mkDerivation {
             fpl
             hardwrap
             latexmk
+            listings
             mathspec
             mathpazo
             metafont

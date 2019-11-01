@@ -1,5 +1,6 @@
 \usepackage{proof}
 \usepackage{ebproof}
+\usepackage{listings}
 
 \title{Programming Language Semantics}
 \subtitle{An overview of operational, denotational and axiomatic styles of semantics}
@@ -13,18 +14,19 @@ Engineering, Goldman Sachs}
 
 \mode<article>{\lecturenumber{1}}
 
-\addtolength{\jot}{\baselineskip}
+\addtolength{\jot}{0.5\baselineskip}
+
+% Denotations
+\newcommand{\den}[2]{ \mathcal{#1} [\![ #2 ]\!] }%
+\newcommand{\denA}[1]{ \den{A}{#1} }%
+\newcommand{\denB}[1]{ \den{B}{#1} }%
+\newcommand{\denC}[1]{ \den{C}{#1} }%
 
 \begin{document}
 
 \maketitle
 
 \mode*  % ignore text outside frame in presentation mode
-
-% This is your lecture abstract. It should contain a short description of the
-% lecture contents, what its goals are, and preferably not exceed a few dozen
-% words.\marginnote{Do not forget to use margin notes to add more context to
-% your material.}
 
 These notes aim to provide a very brief overview of three styles of formal
 semantics used to describe and understand programming langauges, by
@@ -35,7 +37,7 @@ examples.
 \section{Syntax of IMP}
 
 \begin{frame}
-    \begin{block}{Syntax of IMP}
+    \mode<beamer>{\frametitle{Syntax of IMP}}
     \[\begin{array}{rcl}
         a & ::= & n
                 \mid X
@@ -57,7 +59,6 @@ examples.
                 \mid \mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1 \\
                 && \mathbf{while}\ b\ \mathbf{do}\ c
     \end{array} \]
-    \end{block}%{Syntax of IMP}
     \pause
     \begin{enumerate}
         \item No functions (for simplicity's sake).
@@ -66,21 +67,189 @@ examples.
     \end{enumerate}
 \end{frame}
 
-\section{Operation Semantics of IMP}
+\section{Operational Semantics of IMP}
 
 \begin{frame}
-    \mode<article>{Operational semantics are an abstract, mathematical specification of an interpreter.\\}
-    $\langle a, \sigma \rangle \rightarrow v$ specifies an \emph{evaluation function}, from
+  Operational semantics are an abstract, mathematical specification of an interpreter.
+  \footnote{The style presented here is big-step semantics.}
+\end{frame}
+
+\begin{frame}[fragile]{Evaluation of Arithmetic Expressions}
+    $\langle a, \sigma \rangle \rightarrow n$ specifies an \emph{evaluation function}, from
     a pair of an arithmetic expression $a$ and a state $\sigma$ to an integer $n$.\\
-    \\
-    \pause
-    \begin{block}{Evaluation of Arithmetic Expressions}
+    \begin{overprint}
+        \onslide<1-3>
         \begin{gather*}
             \infer{\langle n , \sigma \rangle \rightarrow n}{} \\
-            \infer{\langle X , \sigma \rangle \rightarrow \sigma(X)}{} \\
+            \infer[\text{\small if } X \in \mathrm{dom}(\sigma)]{\langle X , \sigma \rangle \rightarrow \sigma(X)}{} \\
             \infer[n_\mathrm{sum} = n_0 + n_1]{\langle a_0 + a_1 , \sigma \rangle \rightarrow n_\mathrm{sum}}{\langle a_0 , \sigma \rangle \rightarrow n_0 \qquad \langle a_1 , \sigma \rangle \rightarrow n_1}
         \end{gather*}
-    \end{block}%{Evaluation of Arithmetic Expressions}
+        \begin{alertenv}
+        \begin{itemize}
+            \onslide<2-3>{\item This does \emph{not} specifiy an evaluation order.}
+            \onslide<3>{\item Behaviour is \emph{undefined} if variable is not in state.}
+        \end{itemize}
+        \end{alertenv}
+        \onslide<4-5>
+        \begin{lstlisting}[language=java, basicstyle=\small]
+class AddExpr extends ArithExpr {
+  private final ArithExpr left;
+  private final ArithExpr right;
+  @Override
+  public int eval(Map<Var,Int> state) {
+    return right.eval(state) + left.eval(state);
+  }
+}
+        \end{lstlisting}
+        \onslide<5>{Specification also allows left-first or parallel evaluation.}
+    \end{overprint}
+\end{frame}
+
+\begin{frame}[fragile]{Evaluation of Boolean Expressions}
+    $\langle b, \sigma \rangle \rightarrow v$ specifies an \emph{evaluation function}, from
+    a pair of a boolean expression $b$ and a state $\sigma$ to an boolean $v$.\\
+    \begin{overprint}
+        \onslide<1-2>
+        \begin{gather*}
+            \infer{\langle b_0 \wedge b_1 , \sigma \rangle \rightarrow \mathbf{false}}{\langle b_0 , \sigma \rangle \rightarrow \mathbf{false}} \\
+            \infer{\langle b_0 \wedge b_1 , \sigma \rangle \rightarrow v}{\langle b_0 , \sigma \rangle \rightarrow \mathbf{true} \qquad \langle b_1 , \sigma \rangle \rightarrow v}
+        \end{gather*}
+        \onslide<2>{\alert{This \emph{forces} a left-to-right evaluation order.}}
+        \onslide<3>
+        \begin{lstlisting}[language=java, basicstyle=\small]
+class AndExpr extends BoolExpr {
+  private final BoolExpr left;
+  private final BoolExpr right;
+  @Override
+  public bool eval(Map<Var,Int> state) {
+    return left.eval(state) && right.eval(state);
+  }
+}
+        \end{lstlisting}
+    \end{overprint}
+\end{frame}
+
+\begin{frame}[fragile]{Evaluation of Commands}
+    $\langle c, \sigma \rangle \rightarrow \sigma'$ specifies an \emph{evaluation function}, from
+    a pair of a command $c$ and a state $\sigma$ to a state $\sigma'$.\\
+    \begin{overprint}
+        \onslide<1>
+        \begin{gather*}
+            \infer{\langle \mathbf{skip}, \sigma \rangle \rightarrow \sigma}{} \\
+            \infer{\langle X := a , \sigma \rangle \rightarrow \sigma[a/X]}{\langle a , \sigma \rangle \rightarrow n} \\
+            \infer{\langle c_0; c_1 , \sigma \rangle \rightarrow \sigma''}{\langle c_0 , \sigma \rangle \rightarrow  \sigma' \qquad \langle c_1 , \sigma' \rangle \rightarrow \sigma''}
+        \end{gather*}
+        \onslide<2>
+        \begin{lstlisting}[language=java, basicstyle=\small]
+class AssignCmd extends Command {
+  private final Var var;
+  private final ArithExpr arith;
+  @Override
+  public Map<Var,Int> eval(Map<Var,Int> state) {
+    return state.put(var, arith.eval(state));
+  }
+}
+        \end{lstlisting}
+        \onslide<3>
+        \begin{gather*}
+            \infer{\langle \mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1, \sigma \rangle \rightarrow \sigma'}{\langle b , \sigma \rangle \rightarrow  \mathbf{true} \qquad \langle c_0 , \sigma \rangle \rightarrow \sigma'} \\
+            \infer{\langle \mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1, \sigma \rangle \rightarrow \sigma'}{\langle b , \sigma \rangle \rightarrow  \mathbf{false} \qquad \langle c_1 , \sigma \rangle \rightarrow \sigma'} \\
+            \infer{\langle \mathbf{while}\ b\ \mathbf{do}\ c, \sigma \rangle \rightarrow \sigma}{\langle b , \sigma \rangle \rightarrow  \mathbf{false} } \\
+            \infer{\langle \mathbf{while}\ b\ \mathbf{do}\ c, \sigma \rangle \rightarrow \sigma''}{\langle b , \sigma \rangle \rightarrow  \mathbf{true} \quad \langle c , \sigma \rangle \rightarrow \sigma' \quad \langle \mathbf{while}\ b\ \mathbf{do}\ c, \sigma' \rangle \rightarrow \sigma''}
+        \end{gather*}
+    \end{overprint}
+\end{frame}
+
+\begin{frame}
+    Let $w \equiv \mathbf{while}\ b\ \mathbf{do}\ c$.\\
+    Let $c_0 \sim c_1$ iff $\forall \sigma, \sigma'.\ \langle c_0, \sigma
+    \rangle \rightarrow \sigma' \Leftrightarrow \langle c_1, \sigma \rangle
+    \rightarrow \sigma'$.
+    \begin{theorem}
+        $w \sim \mathbf{if}\ b\ \mathbf{then}\ \{c; w\}\ \mathbf{else}\ \mathbf{skip}$.
+    \end{theorem}
+\end{frame}
+
+\section{Denotational Semantics}
+
+\begin{frame}
+    Denotational semantics defines the \emph{meaning} of programs in a
+    \emph{syntax-independent} way, in terms of a well-understood area of
+    mathematics (domain theory or category theory).\\~\\
+    This allows us to reason about \emph{program equivalence} more generically,
+    potentially across \emph{different programmning languages}.
+\end{frame}
+
+\begin{frame}{Denotations of Arithmetic \& Boolean Expressions}
+    $\denA{a}$ and $\denB{b}$ are \emph{functions} from a state, to a number and
+    boolean respectively.
+    \pause
+    \[\begin{array}{rcl}
+        \denA{n} & = & \lambda \sigma.\ n \\
+        \denA{X} & = & \lambda \sigma.\ \sigma(X) \\
+        \denA{a_0 + a_1} & = & \lambda \sigma.\ \denA{a_0}\sigma + \denA{a_1}\sigma \\
+        \denB{b_0 \wedge b_1} & = &
+            \lambda \sigma.\ \begin{array}[t]{ll}
+                \mathrm{true} & \denB{b_0}\sigma = \mathrm{true} \text{ and } \denB{b_1}\sigma = \mathrm{true} \\
+                \mathrm{false} & \text{ otherwise}
+            \end{array}
+    \end{array}\]
+    \pause
+    \alert{In the absence of side-effects in expressions, order of evaluation specified \emph{operationally} is irrelevant.}
+\end{frame}
+
+\begin{frame}{Denotations of Simple Commands}
+    For simple commands, the denotations are straightforward functions from state to state.
+    \[\begin{array}{rcl}
+        \denC{\mathbf{skip}} & = & \lambda \sigma.\ \sigma \\
+        \denC{X := a} & = & \lambda \sigma.\ \sigma[a/X] \\
+        \denC{c_0; c_1} & = & \denC{c_1} \circ \denC{c_0} \\
+        \denC{\mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1} & = &
+            \lambda \sigma.\ \begin{array}[t]{ll}
+                \denC{c_0}\sigma & \text{if } \denB{b}\sigma = \mathrm{true} \\
+                \denC{c_1}\sigma & \text{otherwise}
+            \end{array}
+    \end{array}\]
+\end{frame}
+
+\begin{frame}{Problems with Denotation of While-loop}
+    However, there are a few constraints for the denotation of while-loops.
+    \pause
+    \begin{itemize}[<+->]
+        \item Must be \emph{compositional}: only the meaning of the parts
+            determines the meaning of the whole.
+        \item Cannot be \emph{arbitrarily} self-referential for the
+            sake of mathematical consistency (viz.~ZFC \& Russel's paradox).
+        \item Must be able to represent and propogate (non-)termination (viz.
+            halting problem).
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Domain Theory}
+    \emph{Domain theory} provides both
+    \pause
+    \begin{itemize}[<+->]
+        \item Least-upper-bounds (suprema) for constructing \emph{fixed-points} to represent recursion \emph{soundly}.
+        \item \emph{Continuous functions} for preserving and propogating (non-)termination.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}{Denotation of While-loop}
+    \[\denC{\mathbf{while}\ b\ \mathbf{do}\ c} = \mathrm{fix}(\Gamma) \]
+    where
+    \[\Gamma(\phi) = \lambda \sigma.\ \begin{array}[t]{ll}
+            \sigma & \text{if } \denB{b}\sigma = \mathrm{false} \\
+            \phi(\denC{c}\sigma) & \textrm{ otherwise }
+    \end{array}\]
+\end{frame}
+
+\begin{frame}{Equivalence of Operational and Denotational Semantics}
+    Because we invented our operational rules `out of thin air', as
+    manipulation of pure syntax, it helps to be able to justify those
+    rules using well-known maths.
+    \begin{theorem}
+        $\forall \sigma, \sigma'.\ \langle c, \sigma \rangle \rightarrow \sigma' \Leftrightarrow \denC{c}{\sigma} = \sigma'$
+    \end{theorem}
 \end{frame}
 
 \begin{frame}<beamer>[standout]
