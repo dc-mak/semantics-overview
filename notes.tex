@@ -29,8 +29,8 @@ Engineering, Goldman Sachs}
 \mode*  % ignore text outside frame in presentation mode
 
 These notes aim to provide a very brief overview of three styles of formal
-semantics used to describe and understand programming langauges, by
-defining the syntax and semantics of a small, imperative langauge called `IMP'.
+semantics used to describe and understand programming languages, by
+defining the syntax and semantics of a small, imperative language called `IMP'.
 They borrow heavily from~\citet{winskel1993formal} for the structure and
 examples.
 
@@ -49,7 +49,7 @@ examples.
                 \mid \mathbf{false}
                 \mid a_0 = a_1
                 \mid a_0 \leq a_1
-                \mid ¬b
+                \mid \neg b
                 \mid b_0 \wedge b_1
                 \mid b_0 \vee b_1 \\
                 \\
@@ -86,7 +86,7 @@ examples.
         \end{gather*}
         \begin{alertenv}
         \begin{itemize}
-            \onslide<2-3>{\item This does \emph{not} specifiy an evaluation order.}
+            \onslide<2-3>{\item This does \emph{not} specify an evaluation order.}
             \onslide<3>{\item Behaviour is \emph{undefined} if variable is not in state.}
         \end{itemize}
         \end{alertenv}
@@ -136,7 +136,7 @@ class AndExpr extends BoolExpr {
         \onslide<1>
         \begin{gather*}
             \infer{\langle \mathbf{skip}, \sigma \rangle \rightarrow \sigma}{} \\
-            \infer{\langle X := a , \sigma \rangle \rightarrow \sigma[a/X]}{\langle a , \sigma \rangle \rightarrow n} \\
+            \infer{\langle X := a , \sigma \rangle \rightarrow \sigma[n/X]}{\langle a , \sigma \rangle \rightarrow n} \\
             \infer{\langle c_0; c_1 , \sigma \rangle \rightarrow \sigma''}{\langle c_0 , \sigma \rangle \rightarrow  \sigma' \qquad \langle c_1 , \sigma' \rangle \rightarrow \sigma''}
         \end{gather*}
         \onslide<2>
@@ -177,7 +177,7 @@ class AssignCmd extends Command {
     \emph{syntax-independent} way, in terms of a well-understood area of
     mathematics (domain theory or category theory).\\~\\
     This allows us to reason about \emph{program equivalence} more generically,
-    potentially across \emph{different programmning languages}.
+    potentially across \emph{different programming languages}.
 \end{frame}
 
 \begin{frame}{Denotations of Arithmetic \& Boolean Expressions}
@@ -202,7 +202,7 @@ class AssignCmd extends Command {
     For simple commands, the denotations are straightforward functions from state to state.
     \[\begin{array}{rcl}
         \denC{\mathbf{skip}} & = & \lambda \sigma.\ \sigma \\
-        \denC{X := a} & = & \lambda \sigma.\ \sigma[a/X] \\
+        \denC{X := a} & = & \lambda \sigma.\ \sigma[\denA{a}\sigma/X] \\
         \denC{c_0; c_1} & = & \denC{c_1} \circ \denC{c_0} \\
         \denC{\mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1} & = &
             \lambda \sigma.\ \begin{array}[t]{ll}
@@ -220,7 +220,7 @@ class AssignCmd extends Command {
             determines the meaning of the whole.
         \item Cannot be \emph{arbitrarily} self-referential for the
             sake of mathematical consistency (viz.~ZFC \& Russel's paradox).
-        \item Must be able to represent and propogate (non-)termination (viz.
+        \item Must be able to represent and propagate (non-)termination (viz.
             halting problem).
     \end{itemize}
 \end{frame}
@@ -230,7 +230,7 @@ class AssignCmd extends Command {
     \pause
     \begin{itemize}[<+->]
         \item Least-upper-bounds (suprema) for constructing \emph{fixed-points} to represent recursion \emph{soundly}.
-        \item \emph{Continuous functions} for preserving and propogating (non-)termination.
+        \item \emph{Continuous functions} for preserving and propagating (non-)termination.
     \end{itemize}
 \end{frame}
 
@@ -241,22 +241,106 @@ class AssignCmd extends Command {
             \sigma & \text{if } \denB{b}\sigma = \mathrm{false} \\
             \phi(\denC{c}\sigma) & \textrm{ otherwise }
     \end{array}\]
+    and
+    \[\mathrm{fix}(f) = \bigsqcup_{n \in \mathbb{N}}{f^n(\perp)}\]
 \end{frame}
 
 \begin{frame}{Equivalence of Operational and Denotational Semantics}
     Because we invented our operational rules `out of thin air', as
     manipulation of pure syntax, it helps to be able to justify those
-    rules using well-known maths.
+    rules using well-known maths (especially the self-referential semantics of
+    a while-loop).
     \begin{theorem}
         $\forall \sigma, \sigma'.\ \langle c, \sigma \rangle \rightarrow \sigma' \Leftrightarrow \denC{c}{\sigma} = \sigma'$
     \end{theorem}
 \end{frame}
 
-\begin{frame}<beamer>[standout]
+\section{Axiomatic Semantics}
+
+\begin{frame}
+    So far, we've been looking at proving properties about the execution and
+    meanings of \emph{all} programs.\\~\\
+    \pause
+    But what if we want to understand a \emph{particular} program?
+    \pause
+    \[\begin{aligned}
+            &S := 0; N := 0; \\
+            &\mathbf{while}\ \neg (N = 101)\ \mathbf{do}\\
+            &\quad\{ S := S + N; N := N + 1 \}
+        \end{aligned}\]
+        \pause
+    How would we prove that this program, when it terminates, is such that
+    the value of $S$ is $\sum_{m=1}^{100} m$?
+\end{frame}
+
+\begin{frame}
+    \mode<beamer>{\frametitle{Syntax of IMP Assertions}}
+    \[\begin{array}{rcl}
+        a & ::= & n
+                \mid X
+                \mid i
+                \mid a_0 + a_1
+                \mid a_0 - a_1
+                \mid a_0 \times a_1 \\
+                \\
+        A & ::= & \mathbf{true}
+                \mid \mathbf{false}
+                \mid a_0 = a_1
+                \mid a_0 \leq a_1
+                \mid \neg A
+                \mid A_0 \wedge A_1 \\
+             && A_0 \vee A_1
+                \mid A_0 \Rightarrow A_1
+                \mid \forall i.\ A
+                \mid \exists i.\ A \\
+    \end{array} \]
+\end{frame}
+
+\begin{frame}{Generating Assertions (1)}
+    \begin{gather*}
+        \infer{\{A\}\mathbf{skip}\{A\}}{} \\
+        \infer{\{A\}c_0; c_1\{C\}}{\{A\}c_0\{B\} \quad \{B\}c_1\{C\}} \\
+        \infer{\{A\}\mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1\{B\}}{\{A \wedge b\}c_0\{B\} \quad \{A \wedge \neg b\}c_1\{B\}} \\
+    \end{gather*}
+\end{frame}
+
+\begin{frame}{Generating Assertions (2)}
+    \begin{gather*}
+        \infer{\{B[a/X]\}X := a\{B\}}{} \\
+        \infer{\{A\}\mathbf{while}\ b\ \mathbf{do}\ c\{A \wedge \neg b\}}{\{A \wedge b\}c\{A\}} \\
+        \infer{\{A\}c\{B\}}{A \textrm{\small{ implies }} A' \quad \{A'\}c_0\{B'\} \quad B' \textrm{\small{ implies }} B} \\
+    \end{gather*}
+\end{frame}
+
+\begin{frame}{Proving a program correct}
+    \begin{theorem}
+        The sum program is correct w.r.t~its specification: key step is loop invariant
+        $S := \sum_{m=1}^{N-1}$.
+    \end{theorem}
+\end{frame}
+
+
+\section{Conclusion}
+
+\begin{frame}
+    \begin{itemize}[<+->]
+        \item Different ways of understanding languages and programs.
+        \item Material presented here is circa 1970's at latest\cite{winskel1993formal}
+            -- can handle realistic languages and proofs now.
+        \item All programmers already have an intuitive understanding of these
+            things -- but this gives more precision to our thoughts.
+    \end{itemize}
+\end{frame}
+
+\begin{frame}<beamer>
   Thank you.
 \end{frame}
 
-\bibliographystyle{plainnat}
-\bibliography{references}
+\appendix%
+
+\begin{frame}[allowframebreaks]
+  \bibliographystyle{plainnat}
+  \bibliography{references}
+\end{frame}
 
 \end{document}
