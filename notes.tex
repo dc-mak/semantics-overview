@@ -1,10 +1,11 @@
 \usepackage{proof}
 \usepackage{ebproof}
 \usepackage{listings}
+\usepackage{natbib}
 
 \title{Programming Language Semantics}
 \subtitle{An overview of operational, denotational and axiomatic styles of semantics}
-\date{11th November, 2019}
+\date{28th January, 2020}
 \author{Dhruv Makwana}
 \institute{%
 Ten Minute Tech Net\\%
@@ -15,6 +16,7 @@ Engineering, Goldman Sachs}
 \mode<article>{\lecturenumber{1}}
 
 \addtolength{\jot}{0.5\baselineskip}
+\setlength{\parskip}{0.5\baselineskip}
 
 % Denotations
 \newcommand{\den}[2]{ \mathcal{#1} [\![ #2 ]\!] }%
@@ -22,11 +24,16 @@ Engineering, Goldman Sachs}
 \newcommand{\denB}[1]{ \den{B}{#1} }%
 \newcommand{\denC}[1]{ \den{C}{#1} }%
 
+\newcommand{\progNot}{\mathop{!}}
+\newcommand{\doubleAmp}{\mathbin{\&\!\&}}
+\newcommand{\doubleBar}{\mathbin{\mathbf{||}}}
+
 \begin{document}
 
 \maketitle
 
 \mode*  % ignore text outside frame in presentation mode
+\setlength\parindent{0pt}
 
 These notes aim to provide a very brief overview of three styles of formal
 semantics used to describe and understand programming languages, by
@@ -43,18 +50,18 @@ examples.
                 \mid X
                 \mid a_0 + a_1
                 \mid a_0 - a_1
-                \mid a_0 \times a_1 \\
+                \mid a_0 \ast a_1 \\
                 \\
         b & ::= & \mathbf{true}
                 \mid \mathbf{false}
-                \mid a_0 = a_1
+                \mid a_0 == a_1
                 \mid a_0 \leq a_1
-                \mid \neg b
-                \mid b_0 \wedge b_1
-                \mid b_0 \vee b_1 \\
+                \mid \progNot b
+                \mid b_0 \doubleAmp b_1
+                \mid b_0 \doubleBar b_1 \\
                 \\
         c & ::= & \mathbf{skip}
-                \mid X := a
+                \mid X = a
                 \mid c_0; c_1
                 \mid \mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1 \\
                 && \mathbf{while}\ b\ \mathbf{do}\ c
@@ -67,16 +74,37 @@ examples.
     \end{enumerate}
 \end{frame}
 
+What is the point of defining our own, very simple language instead of using
+real-world languages familiar to us regular programmers?
+
+First, it allows us to isolate the precise features we wish to study under
+the sterile environment of mathematics (one may draw an analogy with
+laboratory experiments done in the physical sciences); as we understand more,
+our languages of study can become more complex and realistic.
+
+Secondly, even this simple language is Turing complete, so we don't lose any
+theoretical expressivity.
+
 \section{Operational Semantics of IMP}
 
 \begin{frame}
-  Operational semantics are an abstract, mathematical specification of an interpreter.
-  \footnote{The style presented here is big-step semantics.}
+  Operational semantics are an abstract, mathematical specification of an
+  interpreter.\footnote{The style presented here is big-step semantics.}
 \end{frame}
 
+Because of its abstract nature, these specifications can be a bit terse.
+However, they are vastly preferred (by researchers and language-implementers)
+to natural-language semantics because there is no room for ambiguity.
+
+A key skill as a working semanticist is to be able to take descriptions like
+the ones below and translate them into a working (ideally correct, and possibly
+even efficient) implementations. Here, we use Java as one example language;
+however typed-functional languages are ideal for implementing such rules.
+
 \begin{frame}[fragile]{Evaluation of Arithmetic Expressions}
-    $\langle a, \sigma \rangle \rightarrow n$ specifies an \emph{evaluation function}, from
-    a pair of an arithmetic expression $a$ and a state $\sigma$ to an integer $n$.\\
+    $\langle a, \sigma \rangle \rightarrow n$ specifies an \emph{evaluation
+    function}, from a pair of an arithmetic expression $a$ and a state
+    $\sigma$ (finite map from variables to integers) to an integer $n$.
     \begin{overprint}
         \onslide<1-3>
         \begin{gather*}
@@ -93,8 +121,7 @@ examples.
         \onslide<4-5>
         \begin{lstlisting}[language=java, basicstyle=\small]
 class AddExpr extends ArithExpr {
-  private final ArithExpr left;
-  private final ArithExpr right;
+  ArithExpr left, right;
   @Override
   public int eval(Map<Var,Int> state) {
     return right.eval(state) + left.eval(state);
@@ -105,23 +132,33 @@ class AddExpr extends ArithExpr {
     \end{overprint}
 \end{frame}
 
+Under-specified and undefined behaviour are perfectly acceptable. In fact,
+both are crucial for optimising compilers. An optimisation is an analysis and
+transformation of code.  Under-specified or undefined behaviour allow the
+complier to make more assumptions to enable more valid transformations.
+
+In the above example, we could even evaluate the left and right
+sub-expressions in parallel. Or, when implementing variable-lookup, the
+implementation could skip null-checks, thus transferring the responsibility
+of assign-before-use onto the programmer.
+
 \begin{frame}[fragile]{Evaluation of Boolean Expressions}
-    $\langle b, \sigma \rangle \rightarrow v$ specifies an \emph{evaluation function}, from
-    a pair of a boolean expression $b$ and a state $\sigma$ to an boolean $v$.\\
+    $\langle b, \sigma \rangle \rightarrow v$ specifies an \emph{evaluation
+    function}, from a pair of a boolean expression $b$ and a state $\sigma$
+    to an boolean $v$.
     \begin{overprint}
         \onslide<1-2>
         \begin{gather*}
-            \infer{\langle b_0 \wedge b_1 , \sigma \rangle \rightarrow \mathbf{false}}{\langle b_0 , \sigma \rangle \rightarrow \mathbf{false}} \\
-            \infer{\langle b_0 \wedge b_1 , \sigma \rangle \rightarrow v}{\langle b_0 , \sigma \rangle \rightarrow \mathbf{true} \qquad \langle b_1 , \sigma \rangle \rightarrow v}
+            \infer{\langle b_0 \doubleAmp b_1 , \sigma \rangle \rightarrow \mathbf{false}}{\langle b_0 , \sigma \rangle \rightarrow \mathbf{false}} \\
+            \infer{\langle b_0 \doubleAmp b_1 , \sigma \rangle \rightarrow v}{\langle b_0 , \sigma \rangle \rightarrow \mathbf{true} \qquad \langle b_1 , \sigma \rangle \rightarrow v}
         \end{gather*}
         \onslide<2>{\alert{This \emph{forces} a left-to-right evaluation order.}}
         \onslide<3>
         \begin{lstlisting}[language=java, basicstyle=\small]
 class AndExpr extends BoolExpr {
-  private final BoolExpr left;
-  private final BoolExpr right;
+  BoolExpr left, right;
   @Override
-  public bool eval(Map<Var,Int> state) {
+  public boolean eval(Map<Var,Int> state) {
     return left.eval(state) && right.eval(state);
   }
 }
@@ -130,20 +167,22 @@ class AndExpr extends BoolExpr {
 \end{frame}
 
 \begin{frame}[fragile]{Evaluation of Commands}
-    $\langle c, \sigma \rangle \rightarrow \sigma'$ specifies an \emph{evaluation function}, from
-    a pair of a command $c$ and a state $\sigma$ to a state $\sigma'$.\\
+    $\langle c, \sigma \rangle \rightarrow \sigma'$ specifies an
+    \emph{evaluation function}, from a pair of a command $c$ and a state
+    $\sigma$ to a state $\sigma'$.
     \begin{overprint}
         \onslide<1>
+        Read $\sigma + \{X \mapsto n\}$ as ``update key $X$ in map $\sigma$ with value $n$''.
         \begin{gather*}
             \infer{\langle \mathbf{skip}, \sigma \rangle \rightarrow \sigma}{} \\
-            \infer{\langle X := a , \sigma \rangle \rightarrow \sigma[n/X]}{\langle a , \sigma \rangle \rightarrow n} \\
+            \infer{\langle X = a , \sigma \rangle \rightarrow \sigma + \{X \mapsto n\}}{\langle a , \sigma \rangle \rightarrow n} \\
             \infer{\langle c_0; c_1 , \sigma \rangle \rightarrow \sigma''}{\langle c_0 , \sigma \rangle \rightarrow  \sigma' \qquad \langle c_1 , \sigma' \rangle \rightarrow \sigma''}
         \end{gather*}
         \onslide<2>
         \begin{lstlisting}[language=java, basicstyle=\small]
 class AssignCmd extends Command {
-  private final Var var;
-  private final ArithExpr arith;
+  Var var;
+  ArithExpr arith;
   @Override
   public Map<Var,Int> eval(Map<Var,Int> state) {
     return state.put(var, arith.eval(state));
@@ -160,6 +199,10 @@ class AssignCmd extends Command {
     \end{overprint}
 \end{frame}
 
+Unlike expressions, commands do not evaluate to a value, modifying state (the
+store) instead. Commands are typically used for side-effects, such as memory
+modification, IO and network access.
+
 \begin{frame}
     Let $w \equiv \mathbf{while}\ b\ \mathbf{do}\ c$.\\
     Let $c_0 \sim c_1$ iff $\forall \sigma, \sigma'.\ \langle c_0, \sigma
@@ -170,14 +213,27 @@ class AssignCmd extends Command {
     \end{theorem}
 \end{frame}
 
+What do we gain by defining and proving such properties? We gain the ability
+to precisely state and verify intuitive assumptions about a language and its
+evaluation strategy.
+
+We can take for-loops as an example: imagine if we wanted to add for-loops to
+IMP. We could extend the existing interpreter to support the new construct
+and its evaluation rules. Or, we could (a) define the operational semantics
+of a for-loop (b) define its translation into other, pre-existing constructs
+(if-statements and while-loops) and (c) check that the evaluation of the
+for-loop matches the evaluation of the translated one. Then, all we would
+need to do is add a simple syntactic transformation after parsing: we would
+have no need to touch the interpreter.
+
 \section{Denotational Semantics}
 
 \begin{frame}
     Denotational semantics defines the \emph{meaning} of programs in a
     \emph{syntax-independent} way, in terms of a well-understood area of
     mathematics (domain theory or category theory).\\~\\
-    This allows us to reason about \emph{program equivalence} more generically,
-    potentially across \emph{different programming languages}.
+    This allows us to reason about \emph{program equivalence} more
+    generically, potentially across \emph{different programming languages}.
 \end{frame}
 
 \begin{frame}{Denotations of Arithmetic \& Boolean Expressions}
@@ -188,7 +244,7 @@ class AssignCmd extends Command {
         \denA{n} & = & \lambda \sigma.\ n \\
         \denA{X} & = & \lambda \sigma.\ \sigma(X) \\
         \denA{a_0 + a_1} & = & \lambda \sigma.\ \denA{a_0}\sigma + \denA{a_1}\sigma \\
-        \denB{b_0 \wedge b_1} & = &
+        \denB{b_0 \doubleAmp b_1} & = &
             \lambda \sigma.\ \begin{array}[t]{ll}
                 \mathrm{true} & \denB{b_0}\sigma = \mathrm{true} \text{ and } \denB{b_1}\sigma = \mathrm{true} \\
                 \mathrm{false} & \text{ otherwise}
@@ -198,11 +254,22 @@ class AssignCmd extends Command {
     \alert{In the absence of side-effects in expressions, order of evaluation specified \emph{operationally} is irrelevant.}
 \end{frame}
 
+If you have a mathematical background, this presentation is likely to be more
+pleasing.
+
+Programs are said to denote \emph{functions} from state to a value. This
+means we can ignore (some) details of \emph{how} a program is executed and
+focus more on \emph{what} it is computing.
+
+This also allows us to use more sophisticated mathematics in manipulating the
+functions our programs represent.
+
 \begin{frame}{Denotations of Simple Commands}
-    For simple commands, the denotations are straightforward functions from state to state.
+    For simple commands, the denotations are straightforward functions from
+    state to state.
     \[\begin{array}{rcl}
         \denC{\mathbf{skip}} & = & \lambda \sigma.\ \sigma \\
-        \denC{X := a} & = & \lambda \sigma.\ \sigma[\denA{a}\sigma/X] \\
+        \denC{X = a} & = & \lambda \sigma.\ \sigma + \{ X \mapsto \denA{a}\} \\
         \denC{c_0; c_1} & = & \denC{c_1} \circ \denC{c_0} \\
         \denC{\mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1} & = &
             \lambda \sigma.\ \begin{array}[t]{ll}
@@ -212,8 +279,12 @@ class AssignCmd extends Command {
     \end{array}\]
 \end{frame}
 
+Subjectively, I think there is something rather elegant and beautiful in
+denoting the sequencing-semicolon as function composition.
+
 \begin{frame}{Problems with Denotation of While-loop}
-    However, there are a few constraints for the denotation of while-loops.
+    There are constraints that the definition of denotations must follow,
+    which make it problematic to handle while-loops:
     \pause
     \begin{itemize}[<+->]
         \item Must be \emph{compositional}: only the meaning of the parts
@@ -225,29 +296,71 @@ class AssignCmd extends Command {
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Domain Theory}
-    \emph{Domain theory} provides both
+Why must denotations be compositional? It greatly simplifies proofs if they
+are - we don't need to consider special cases of particular combinations of
+syntax (think of puzzlers in your favourite language). A simple example from
+Slang illustrates the importance of this: $\den{}{A \mathbin{+\!=} B} \neq
+\den{}{A = A + B}$.
+
+\begin{frame}
+    \mode<beamer>{\frametitle{Domain Theory}}
+    \emph{Domain theory}\footnote{Modern semanticists rely heavily on category-theory.} provides both
     \pause
     \begin{itemize}[<+->]
         \item Least-upper-bounds (suprema) for constructing \emph{fixed-points} to represent recursion \emph{soundly}.
-        \item \emph{Continuous functions} for preserving and propagating (non-)termination.
+        \item \emph{Continuous functions} for preserving and propagating termination.
     \end{itemize}
 \end{frame}
+
+Continuity in domain theory is a generalisation of what you may have seen in
+an introduction to analysis class. It includes montonocity and the
+preservation of least-upper-bounds.
+
+In this context, monotonicity ensures we can't construct functions of the
+form ``if \emph{this} doesn't terminate then do \emph{this other thing}
+otherwise do \emph{that}'' and preservation of least-upper-bounds ensures we
+can only construct functions that preserve termination in a sensible manner.
 
 \begin{frame}{Denotation of While-loop}
     \[\denC{\mathbf{while}\ b\ \mathbf{do}\ c} = \mathrm{fix}(\Gamma) \]
     where
     \[\Gamma(\phi) = \lambda \sigma.\ \begin{array}[t]{ll}
             \sigma & \text{if } \denB{b}\sigma = \mathrm{false} \\
-            \phi(\denC{c}\sigma) & \textrm{ otherwise }
+            \phi(\denC{c}\sigma) & \text{otherwise}
     \end{array}\]
     and
     \[\mathrm{fix}(f) = \bigsqcup_{n \in \mathbb{N}}{f^n(\perp)}\]
 \end{frame}
 
+You can think of $\Gamma$'s argument $\phi$ as factoring out the recursion;
+it's the mathematical equivalent of passing in a callback.
+
+\begin{frame}{Explaining `$\mathrm{fix}$'}
+    \begin{alignat*}{2}
+        & \Gamma^0 &(\perp) &= \lambda \sigma.\ \perp \\
+        & \Gamma^1 &(\perp) &= \lambda \sigma.\ \begin{array}[t]{ll}
+                \sigma & \text{if } \denB{b}\sigma = \mathrm{false} \\
+                \perp & \text{otherwise}
+        \end{array} \\
+        & \Gamma^2 &(\perp) &= \lambda \sigma.\ \begin{array}[t]{ll}
+                \sigma & \text{if } \denB{b}\sigma = \mathrm{false} \\
+                \denC{c}\sigma & \text{if } \denB{b}\sigma = \mathrm{true} \text{ and} \\
+                            & \denB{b}(\denC{c}\sigma) = \mathrm{false} \\
+                \perp & \text{otherwise}
+        \end{array} \\
+        & & & \vdots
+    \end{alignat*}
+\end{frame}
+
+The intuition for `$\mathrm{fix}$' is a little more subtle: $\perp$
+represents the callback which never terminates. Every time we iterate, we
+effectively add an extra branch to this piecewise function. By taking the
+big-union over all of the functions, we allow the possibility of the loop
+executing any number of times.
+
 \begin{frame}{Equivalence of Operational and Denotational Semantics}
     Because we invented our operational rules `out of thin air', as
-    manipulation of pure syntax, it helps to be able to justify those
+    manipulation of pure syntax, it's important to justify those
     rules using well-known maths (especially the self-referential semantics of
     a while-loop).
     \begin{theorem}
@@ -264,17 +377,18 @@ class AssignCmd extends Command {
     But what if we want to understand a \emph{particular} program?
     \pause
     \[\begin{aligned}
-            &S := 0; N := 0; \\
-            &\mathbf{while}\ \neg (N = 101)\ \mathbf{do}\\
-            &\quad\{ S := S + N; N := N + 1 \}
+            &S = 0; N = 0; \\
+            &\mathbf{while}\ \progNot (N == 101)\ \mathbf{do}\\
+            &\quad\{ S = S + N; N = N + 1 \}
         \end{aligned}\]
-        \pause
-    How would we prove that this program, when it terminates, is such that
-    the value of $S$ is $\sum_{m=1}^{100} m$?
+    \alert{How would we prove that this program, if it terminates, ends with
+    the value of $S$ as $5050$ ($\sum_{m=1}^{100} m$)?}
 \end{frame}
 
-\begin{frame}
-    \mode<beamer>{\frametitle{Syntax of IMP Assertions}}
+\begin{frame}{Syntax of IMP Assertions}
+    We need to define an \emph{assertion-language} (with its own syntax and
+    semantics!) so that we can precisely state properties we want to prove.
+    \pause
     \[\begin{array}{rcl}
         a & ::= & n
                 \mid X
@@ -296,26 +410,44 @@ class AssignCmd extends Command {
     \end{array} \]
 \end{frame}
 
+Though the notion of assertion-langauges might sound strange, we can map it
+back to what we've understood here. A proof would be a valid program in the
+assertion-language; an operational semantics corresponds to proof
+simplification; a denotational semantics would justify the consistency of our
+assertion-langauge. However, all of this is \emph{far} beyond the scope of
+these notes.
+
 \begin{frame}{Generating Assertions (1)}
     \begin{gather*}
         \infer{\{A\}\mathbf{skip}\{A\}}{} \\
         \infer{\{A\}c_0; c_1\{C\}}{\{A\}c_0\{B\} \quad \{B\}c_1\{C\}} \\
-        \infer{\{A\}\mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1\{B\}}{\{A \wedge b\}c_0\{B\} \quad \{A \wedge \neg b\}c_1\{B\}} \\
+        \infer{\{A\}\mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1\{B\}}{\{A \wedge b\}c_0\{B\} \quad \{A \wedge \neg b\}c_1\{B\}}
     \end{gather*}
 \end{frame}
 
+Why do we want to \emph{generate} assertions? Automatic code analysis tools
+rely on this to figure out which pre-conditions might not be met by a
+particular piece of a program. For example, a method-call on an object in
+Java has the pre-condition that the object is not null.
+
 \begin{frame}{Generating Assertions (2)}
+    Read $B[a/X]$ as ``substitute $a$ for $X$ in $B$''.
     \begin{gather*}
         \infer{\{B[a/X]\}X := a\{B\}}{} \\
         \infer{\{A\}\mathbf{while}\ b\ \mathbf{do}\ c\{A \wedge \neg b\}}{\{A \wedge b\}c\{A\}} \\
-        \infer{\{A\}c\{B\}}{A \textrm{\small{ implies }} A' \quad \{A'\}c_0\{B'\} \quad B' \textrm{\small{ implies }} B} \\
+        \infer{\{A\}c\{B\}}{A \Rightarrow A' \quad \{A'\}c_0\{B'\} \quad B' \Rightarrow B}
     \end{gather*}
 \end{frame}
+
+The assignment rule might look backwards; it isn't. To convince yourself of
+this, consider $\{X + 1 = 2\} X := X + 1 \{X = 2\}$. With the substitution the
+other way around, your logic would be inconsistent; you could prove $\{X = 0\}
+X := 1 \{ 1 = 0 \}$.
 
 \begin{frame}{Proving a program correct}
     \begin{theorem}
         The sum program is correct w.r.t~its specification: key step is loop invariant
-        $S := \sum_{m=1}^{N-1}$.
+        $S = \sum_{m=1}^{N-1}m$.
     \end{theorem}
 \end{frame}
 
@@ -325,15 +457,12 @@ class AssignCmd extends Command {
 \begin{frame}
     \begin{itemize}[<+->]
         \item Different ways of understanding languages and programs.
-        \item Material presented here is circa 1970's at latest\cite{winskel1993formal}
-            -- can handle realistic languages and proofs now.
+        \item Material presented here is circa 1970's research,
+        well-established by~\citet{winskel1993formal} -- can handle
+        realistic languages and proofs now.
         \item All programmers already have an intuitive understanding of these
             things -- but this gives more precision to our thoughts.
     \end{itemize}
-\end{frame}
-
-\begin{frame}<beamer>
-  Thank you.
 \end{frame}
 
 \appendix%
@@ -342,5 +471,10 @@ class AssignCmd extends Command {
   \bibliographystyle{plainnat}
   \bibliography{references}
 \end{frame}
+
+\begin{frame}<beamer>[standout]
+    Thank you
+\end{frame}
+
 
 \end{document}

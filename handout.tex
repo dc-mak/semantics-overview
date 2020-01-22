@@ -72,4 +72,8 @@
   {}% before the title body
   []% after the title body
 
+\let\oldframetitle\frametitle
+\renewcommand{\frametitle}[1]{\oldframetitle{\emph{\textbf{#1}}}}
+\renewcommand{\alert}[1]{\textsf{#1}}
+
 \input{notes.tex}
