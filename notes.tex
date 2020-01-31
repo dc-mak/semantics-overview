@@ -8,7 +8,7 @@
 \date{28th January, 2020}
 \author{Dhruv Makwana}
 \institute{%
-Ten Minute Tech Net\\%
+TenMinute Tech-Net\\%
 Engineering, Goldman Sachs}
 
 \graphicspath{{./graphics/}}
@@ -27,6 +27,9 @@ Engineering, Goldman Sachs}
 \newcommand{\progNot}{\mathop{!}}
 \newcommand{\doubleAmp}{\mathbin{\&\!\&}}
 \newcommand{\doubleBar}{\mathbin{\mathbf{||}}}
+
+\mode<beamer>{\lstset{basicstyle=\small\ttfamily}}
+\mode<article>{\lstset{basicstyle=\ttfamily}}
 
 \begin{document}
 
@@ -69,7 +72,7 @@ examples.
     \pause
     \begin{enumerate}
         \item No functions (for simplicity's sake).
-        \item All terms are "well-typed" by definition.
+        \item All terms are ``well-typed'' by definition.
         \item In code: either tagged-unions or inheritance.
     \end{enumerate}
 \end{frame}
@@ -92,7 +95,7 @@ theoretical expressivity.
   interpreter.\footnote{The style presented here is big-step semantics.}
 \end{frame}
 
-Because of its abstract nature, these specifications can be a bit terse.
+Because of their abstract nature, these specifications can be a bit terse.
 However, they are vastly preferred (by researchers and language-implementers)
 to natural-language semantics because there is no room for ambiguity.
 
@@ -119,7 +122,7 @@ however typed-functional languages are ideal for implementing such rules.
         \end{itemize}
         \end{alertenv}
         \onslide<4-5>
-        \begin{lstlisting}[language=java, basicstyle=\small]
+        \begin{lstlisting}[language=java]
 class AddExpr extends ArithExpr {
   ArithExpr left, right;
   @Override
@@ -145,7 +148,7 @@ of assign-before-use onto the programmer.
 \begin{frame}[fragile]{Evaluation of Boolean Expressions}
     $\langle b, \sigma \rangle \rightarrow v$ specifies an \emph{evaluation
     function}, from a pair of a boolean expression $b$ and a state $\sigma$
-    to an boolean $v$.
+    to a boolean $v$.
     \begin{overprint}
         \onslide<1-2>
         \begin{gather*}
@@ -154,7 +157,7 @@ of assign-before-use onto the programmer.
         \end{gather*}
         \onslide<2>{\alert{This \emph{forces} a left-to-right evaluation order.}}
         \onslide<3>
-        \begin{lstlisting}[language=java, basicstyle=\small]
+        \begin{lstlisting}[language=java]
 class AndExpr extends BoolExpr {
   BoolExpr left, right;
   @Override
@@ -179,7 +182,7 @@ class AndExpr extends BoolExpr {
             \infer{\langle c_0; c_1 , \sigma \rangle \rightarrow \sigma''}{\langle c_0 , \sigma \rangle \rightarrow  \sigma' \qquad \langle c_1 , \sigma' \rangle \rightarrow \sigma''}
         \end{gather*}
         \onslide<2>
-        \begin{lstlisting}[language=java, basicstyle=\small]
+        \begin{lstlisting}[language=java]
 class AssignCmd extends Command {
   Var var;
   ArithExpr arith;
@@ -205,7 +208,7 @@ modification, IO and network access.
 
 \begin{frame}
     Let $w \equiv \mathbf{while}\ b\ \mathbf{do}\ c$.\\
-    Let $c_0 \sim c_1$ iff $\forall \sigma, \sigma'.\ \langle c_0, \sigma
+    Define $c_0 \sim c_1$ as $\forall \sigma, \sigma'.\ \langle c_0, \sigma
     \rangle \rightarrow \sigma' \Leftrightarrow \langle c_1, \sigma \rangle
     \rightarrow \sigma'$.
     \begin{theorem}
@@ -217,7 +220,7 @@ What do we gain by defining and proving such properties? We gain the ability
 to precisely state and verify intuitive assumptions about a language and its
 evaluation strategy.
 
-We can take for-loops as an example: imagine if we wanted to add for-loops to
+We can take for-loops as an example: imagine we want to add for-loops to
 IMP. We could extend the existing interpreter to support the new construct
 and its evaluation rules. Or, we could (a) define the operational semantics
 of a for-loop (b) define its translation into other, pre-existing constructs
@@ -269,7 +272,7 @@ functions our programs represent.
     state to state.
     \[\begin{array}{rcl}
         \denC{\mathbf{skip}} & = & \lambda \sigma.\ \sigma \\
-        \denC{X = a} & = & \lambda \sigma.\ \sigma + \{ X \mapsto \denA{a}\} \\
+        \denC{X = a} & = & \lambda \sigma.\ \sigma + \{ X \mapsto \denA{a}\sigma\} \\
         \denC{c_0; c_1} & = & \denC{c_1} \circ \denC{c_0} \\
         \denC{\mathbf{if}\ b\ \mathbf{then}\ c_0\ \mathbf{else}\ c_1} & = &
             \lambda \sigma.\ \begin{array}[t]{ll}
@@ -297,14 +300,14 @@ denoting the sequencing-semicolon as function composition.
 \end{frame}
 
 Why must denotations be compositional? It greatly simplifies proofs if they
-are - we don't need to consider special cases of particular combinations of
+are -- we don't need to consider special cases of particular combinations of
 syntax (think of puzzlers in your favourite language). A simple example from
 Slang illustrates the importance of this: $\den{}{A \mathbin{+\!=} B} \neq
-\den{}{A = A + B}$.
+\den{}{A = A + B}$.\footnote{Example in \texttt{\frenchspacing Test:\ Slang Gotchas}}
 
 \begin{frame}
     \mode<beamer>{\frametitle{Domain Theory}}
-    \emph{Domain theory}\footnote{Modern semanticists rely heavily on category-theory.} provides both
+    \emph{Domain theory}\footnote{Modern semanticists rely heavily on category theory.} provides both
     \pause
     \begin{itemize}[<+->]
         \item Least-upper-bounds (suprema) for constructing \emph{fixed-points} to represent recursion \emph{soundly}.
@@ -433,16 +436,16 @@ Java has the pre-condition that the object is not null.
 \begin{frame}{Generating Assertions (2)}
     Read $B[a/X]$ as ``substitute $a$ for $X$ in $B$''.
     \begin{gather*}
-        \infer{\{B[a/X]\}X := a\{B\}}{} \\
+        \infer{\{B[a/X]\}X = a\{B\}}{} \\
         \infer{\{A\}\mathbf{while}\ b\ \mathbf{do}\ c\{A \wedge \neg b\}}{\{A \wedge b\}c\{A\}} \\
         \infer{\{A\}c\{B\}}{A \Rightarrow A' \quad \{A'\}c_0\{B'\} \quad B' \Rightarrow B}
     \end{gather*}
 \end{frame}
 
 The assignment rule might look backwards; it isn't. To convince yourself of
-this, consider $\{X + 1 = 2\} X := X + 1 \{X = 2\}$. With the substitution the
+this, consider $\{X + 1 = 2\} X = X + 1 \{X = 2\}$. With the substitution the
 other way around, your logic would be inconsistent; you could prove $\{X = 0\}
-X := 1 \{ 1 = 0 \}$.
+X = 1 \{ 1 = 0 \}$.
 
 \begin{frame}{Proving a program correct}
     \begin{theorem}
